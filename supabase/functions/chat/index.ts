@@ -28,7 +28,7 @@ serve(async (req) => {
       .from('settings')
       .select('value')
       .eq('key', 'gemini_api_key')
-      .single();
+      .maybeSingle();
 
     if (apiKeyError || !apiKeyData?.value) {
       console.error('API key error:', apiKeyError);
@@ -42,7 +42,7 @@ serve(async (req) => {
     const { data: helpdeskData, error: helpdeskError } = await supabase
       .from('helpdesk_info')
       .select('content')
-      .single();
+      .maybeSingle();
 
     if (helpdeskError) {
       console.error('Helpdesk info error:', helpdeskError);
@@ -62,41 +62,55 @@ PENTING:
 - Gunakan bahasa yang sopan, profesional, dan ramah
 - Berikan jawaban yang jelas dan informatif`;
 
-    // Call Gemini API using the latest stable model
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeyData.value}`;
-    
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: systemPrompt },
-              { text: `User: ${message}` }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-        }
-      })
-    });
+    // Try multiple Gemini models for compatibility
+    const candidates = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    let success = false;
+    let reply = 'Maaf, terjadi kesalahan dalam memproses permintaan Anda.';
+    let lastErr = '';
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+    for (const model of candidates) {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeyData.value}`;
+      const geminiResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: systemPrompt },
+                { text: `User: ${message}` }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000,
+          }
+        })
+      });
+
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        lastErr = `Gemini API error for ${model}: ${errorText}`;
+        console.error(lastErr);
+        continue;
+      }
+
+      const geminiData = await geminiResponse.json();
+      reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || reply;
+      success = true;
+      break;
     }
 
-    const geminiData = await geminiResponse.json();
-    console.log('Gemini response:', JSON.stringify(geminiData));
+    if (!success) {
+      return new Response(
+        JSON.stringify({ error: 'Tidak dapat menghubungkan ke Gemini API. ' + (lastErr || '') }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 
-                 'Maaf, terjadi kesalahan dalam memproses permintaan Anda.';
 
     return new Response(
       JSON.stringify({ reply }),
