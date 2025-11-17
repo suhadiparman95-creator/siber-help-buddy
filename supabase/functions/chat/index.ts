@@ -62,13 +62,37 @@ PENTING:
 - Gunakan bahasa yang sopan, profesional, dan ramah
 - Berikan jawaban yang jelas dan informatif`;
 
-    // Try multiple Gemini models for compatibility
-    const candidates = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    // Discover available models dynamically and prefer stable ones
+    let available: string[] = [];
+    try {
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeyData.value}`;
+      const listResp = await fetch(listUrl, { method: 'GET' });
+      if (listResp.ok) {
+        const listJson = await listResp.json();
+        const models = listJson.models as Array<{ name: string; supported_generation_methods?: string[] }>;
+        available = (models || [])
+          .filter(m => (m.supported_generation_methods || []).includes('generateContent'))
+          .map(m => (m.name || '').replace(/^models\//, ''))
+          .filter(Boolean);
+      } else {
+        console.error('Failed to list models:', await listResp.text());
+      }
+    } catch (e) {
+      console.error('Error listing models:', e);
+    }
+
+    const preferred = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const orderedCandidates = Array.from(new Set([
+      ...preferred.filter(m => available.includes(m)),
+      ...available,
+      ...preferred, // fallback
+    ]));
+
     let success = false;
     let reply = 'Maaf, terjadi kesalahan dalam memproses permintaan Anda.';
     let lastErr = '';
 
-    for (const model of candidates) {
+    for (const model of orderedCandidates) {
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeyData.value}`;
       const geminiResponse = await fetch(geminiUrl, {
         method: 'POST',
