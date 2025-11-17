@@ -60,7 +60,10 @@ PENTING:
 - Jawab HANYA pertanyaan yang berkaitan dengan Help Desk UPT PJJ berdasarkan informasi di atas
 - Jika pertanyaan di luar konteks Help Desk, jawab dengan sopan: "Maaf, saya hanya dapat membantu menjawab pertanyaan seputar Help Desk UPT PJJ. Apakah ada yang bisa saya bantu terkait layanan help desk kami?"
 - Gunakan bahasa yang sopan, profesional, dan ramah
-- Berikan jawaban yang jelas dan informatif`;
+- Berikan jawaban yang jelas dan informatif
+- JANGAN mengulang sapaan seperti "Halo", "Selamat datang", atau perkenalan di setiap respons
+- Langsung jawab pertanyaan dengan natural seperti percakapan biasa
+- Hanya sapa di awal percakapan saja, untuk respons selanjutnya langsung ke inti jawaban`;
 
     // Discover available models dynamically and prefer stable ones
     let available: string[] = [];
