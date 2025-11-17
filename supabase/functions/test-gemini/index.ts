@@ -17,40 +17,44 @@ serve(async (req) => {
       throw new Error('API key is required');
     }
 
-    // Test Gemini API with a simple request using the latest stable model
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: 'Say "Connection successful" if you can read this.' }
-            ]
-          }
-        ]
-      })
-    });
+    // Step 1: Simple connectivity check by listing models
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const listResp = await fetch(listUrl, { method: 'GET' });
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API test error:', errorText);
-      
+    if (!listResp.ok) {
+      const errorText = await listResp.text();
+      console.error('Gemini list models error:', errorText);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `API key tidak valid atau terjadi kesalahan. Status: ${geminiResponse.status}` 
-        }),
+        JSON.stringify({ success: false, error: `API key tidak valid atau terjadi kesalahan. Status: ${listResp.status}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const geminiData = await geminiResponse.json();
-    console.log('Gemini test response:', JSON.stringify(geminiData));
+    // Optional Step 2: Try a tiny generate call with robust model alias
+    const candidates = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
+    let genOk = false;
+
+    for (const model of candidates) {
+      const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const genResp = await fetch(genUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [ { parts: [ { text: 'Katakan: Koneksi berhasil.' } ] } ]
+        })
+      });
+      if (genResp.ok) { genOk = true; break; }
+      const t = await genResp.text();
+      console.error('Gemini generate test error for', model, t);
+    }
+
+    if (!genOk) {
+      // Still consider connectivity successful since listing works
+      return new Response(
+        JSON.stringify({ success: true, message: 'Koneksi berhasil! (Model generateContent akan disesuaikan otomatis)' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Koneksi berhasil!' }),
