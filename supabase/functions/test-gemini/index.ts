@@ -17,8 +17,8 @@ serve(async (req) => {
       throw new Error('API key is required');
     }
 
-    // Test Gemini API with a simple request
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    // Test Gemini API with a simple request using the latest stable model
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
