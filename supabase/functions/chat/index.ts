@@ -62,8 +62,8 @@ PENTING:
 - Gunakan bahasa yang sopan, profesional, dan ramah
 - Berikan jawaban yang jelas dan informatif`;
 
-    // Call Gemini API
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKeyData.value}`;
+    // Call Gemini API using the latest stable model
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeyData.value}`;
     
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
