@@ -18,6 +18,8 @@ const Admin = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoHeader, setLogoHeader] = useState('');
   const [logoChatbot, setLogoChatbot] = useState('');
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,6 +67,17 @@ const Admin = () => {
 
       if (logoChatbotData) {
         setLogoChatbot(logoChatbotData.value || '');
+      }
+
+      // Load favicon URL
+      const { data: faviconData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'favicon_url')
+        .maybeSingle();
+
+      if (faviconData) {
+        setFaviconUrl(faviconData.value || '');
       }
 
       // Load helpdesk info
@@ -280,7 +293,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="api" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="api">
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan API
@@ -288,6 +301,10 @@ const Admin = () => {
             <TabsTrigger value="logos">
               <Image className="mr-2 h-4 w-4" />
               Logo
+            </TabsTrigger>
+            <TabsTrigger value="favicon">
+              <Upload className="mr-2 h-4 w-4" />
+              Favicon
             </TabsTrigger>
             <TabsTrigger value="info">
               <Info className="mr-2 h-4 w-4" />
@@ -440,6 +457,125 @@ const Admin = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="favicon">
+            <Card className="shadow-medium">
+              <CardHeader>
+                <CardTitle>Pengaturan Favicon</CardTitle>
+                <CardDescription>
+                  Upload favicon untuk aplikasi (format: ICO, PNG, atau SVG)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {faviconUrl && (
+                  <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
+                    <img 
+                      src={faviconUrl} 
+                      alt="Current Favicon" 
+                      className="h-8 w-8 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Favicon Saat Ini</p>
+                      <p className="text-xs text-muted-foreground truncate">{faviconUrl}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <Label htmlFor="favicon-upload">Upload Favicon Baru</Label>
+                  <Input
+                    id="favicon-upload"
+                    type="file"
+                    accept=".ico,.png,.svg"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      if (file.size > 1024 * 1024) {
+                        toast({
+                          title: 'Error',
+                          description: 'Ukuran file maksimal 1MB',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+
+                      setUploadingFavicon(true);
+
+                      try {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `favicon-${Date.now()}.${fileExt}`;
+                        const filePath = `${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from('logos')
+                          .upload(filePath, file, { upsert: true });
+
+                        if (uploadError) throw uploadError;
+
+                        const { data: { publicUrl } } = supabase.storage
+                          .from('logos')
+                          .getPublicUrl(filePath);
+
+                        const { error: saveError } = await supabase
+                          .from('settings')
+                          .upsert({
+                            key: 'favicon_url',
+                            value: publicUrl,
+                          });
+
+                        if (saveError) throw saveError;
+
+                        setFaviconUrl(publicUrl);
+
+                        const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+                        link.type = file.type;
+                        link.rel = 'icon';
+                        link.href = publicUrl;
+                        document.getElementsByTagName('head')[0].appendChild(link);
+
+                        toast({
+                          title: 'Berhasil',
+                          description: 'Favicon berhasil diupload dan diperbarui',
+                        });
+
+                        e.target.value = '';
+                      } catch (error) {
+                        console.error('Error uploading favicon:', error);
+                        toast({
+                          title: 'Error',
+                          description: 'Gagal mengupload favicon',
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setUploadingFavicon(false);
+                      }
+                    }}
+                    disabled={uploadingFavicon}
+                  />
+                  {uploadingFavicon && (
+                    <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Mengupload favicon...
+                    </p>
+                  )}
+                </div>
+
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium">Tips:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Ukuran yang direkomendasikan: 16x16, 32x32, atau 48x48 pixels</li>
+                    <li>Format ICO untuk kompatibilitas terbaik</li>
+                    <li>PNG atau SVG juga didukung oleh browser modern</li>
+                    <li>Favicon akan diperbarui otomatis setelah upload</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

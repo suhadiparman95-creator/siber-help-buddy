@@ -28,8 +28,29 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [logoHeader, setLogoHeader] = useState(logoUINSSC);
   const [logoChatbot, setLogoChatbot] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Load and update favicon from settings
+  useEffect(() => {
+    const loadFavicon = async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'favicon_url')
+        .maybeSingle();
+
+      if (data?.value) {
+        const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
+        link.rel = 'icon';
+        link.href = data.value;
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+    };
+
+    loadFavicon();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
