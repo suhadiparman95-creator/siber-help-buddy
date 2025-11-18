@@ -26,6 +26,8 @@ const Index = () => {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [logoHeader, setLogoHeader] = useState(logoUINSSC);
+  const [logoChatbot, setLogoChatbot] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -36,6 +38,36 @@ const Index = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    loadLogos();
+  }, []);
+
+  const loadLogos = async () => {
+    try {
+      const { data: logoHeaderData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'logo_header')
+        .maybeSingle();
+
+      if (logoHeaderData?.value) {
+        setLogoHeader(logoHeaderData.value);
+      }
+
+      const { data: logoChatbotData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'logo_chatbot')
+        .maybeSingle();
+
+      if (logoChatbotData?.value) {
+        setLogoChatbot(logoChatbotData.value);
+      }
+    } catch (error) {
+      console.error('Error loading logos:', error);
+    }
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +127,7 @@ const Index = () => {
       <header className="bg-card border-b shadow-soft">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logoUINSSC} alt="Logo UIN Siber" className="h-12 w-12 object-contain" />
+            <img src={logoHeader} alt="Logo UIN Siber" className="h-12 w-12 object-contain" />
             <div>
               <h1 className="text-2xl font-bold text-primary">Help Desk UPT PJJ</h1>
               <p className="text-sm text-muted-foreground">UIN Siber Syekh Nurjati Cirebon</p>
@@ -120,8 +152,12 @@ const Index = () => {
               }`}
             >
               {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-5 w-5 text-primary-foreground" />
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {logoChatbot ? (
+                    <img src={logoChatbot} alt="Chatbot" className="w-full h-full object-cover" />
+                  ) : (
+                    <Bot className="h-5 w-5 text-primary-foreground" />
+                  )}
                 </div>
               )}
               <Card
