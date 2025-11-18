@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Loader2, Bot, User, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logoUINSSC from '@/assets/logo-uinssc.jpg';
+import logoUINSSC from '@/assets/logo-uinssc.png';
 
 interface Message {
   id: string;
