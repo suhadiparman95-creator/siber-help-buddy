@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Loader2, Bot, User, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import logoUINSSC from '@/assets/logo-uinssc.jpg';
 
 interface Message {
   id: string;
@@ -93,9 +94,12 @@ const Index = () => {
       {/* Header */}
       <header className="bg-card border-b shadow-soft">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-primary">Help Desk UPT PJJ</h1>
-            <p className="text-sm text-muted-foreground">UIN Siber Syekh Nurjati Cirebon</p>
+          <div className="flex items-center gap-3">
+            <img src={logoUINSSC} alt="Logo UIN Siber" className="h-12 w-12 object-contain" />
+            <div>
+              <h1 className="text-2xl font-bold text-primary">Help Desk UPT PJJ</h1>
+              <p className="text-sm text-muted-foreground">UIN Siber Syekh Nurjati Cirebon</p>
+            </div>
           </div>
           <Link to="/auth">
             <Button variant="outline" size="sm">
