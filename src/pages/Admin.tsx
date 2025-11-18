@@ -8,13 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Settings, Info, Home } from 'lucide-react';
+import { Loader2, LogOut, Settings, Info, Home, Image, Upload } from 'lucide-react';
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [helpdeskInfo, setHelpdeskInfo] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoHeader, setLogoHeader] = useState('');
+  const [logoChatbot, setLogoChatbot] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,6 +44,27 @@ const Admin = () => {
 
       if (apiKeyData) {
         setApiKey(apiKeyData.value || '');
+      }
+
+      // Load logo URLs
+      const { data: logoHeaderData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'logo_header')
+        .maybeSingle();
+
+      if (logoHeaderData) {
+        setLogoHeader(logoHeaderData.value || '');
+      }
+
+      const { data: logoChatbotData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'logo_chatbot')
+        .maybeSingle();
+
+      if (logoChatbotData) {
+        setLogoChatbot(logoChatbotData.value || '');
       }
 
       // Load helpdesk info
@@ -134,6 +158,62 @@ const Admin = () => {
     }
   };
 
+  const handleLogoUpload = async (file: File, type: 'header' | 'chatbot') => {
+    setUploadingLogo(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      // Save URL to settings
+      const settingKey = type === 'header' ? 'logo_header' : 'logo_chatbot';
+      const { error: settingsError } = await supabase
+        .from('settings')
+        .upsert({
+          key: settingKey,
+          value: publicUrl,
+        });
+
+      if (settingsError) throw settingsError;
+
+      if (type === 'header') {
+        setLogoHeader(publicUrl);
+      } else {
+        setLogoChatbot(publicUrl);
+      }
+
+      toast({
+        title: 'Berhasil',
+        description: `Logo ${type === 'header' ? 'header' : 'chatbot'} berhasil diupload`,
+      });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal mengupload logo',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const saveHelpdeskInfo = async () => {
     setLoading(true);
 
@@ -200,10 +280,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="api" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="api">
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan API
+            </TabsTrigger>
+            <TabsTrigger value="logos">
+              <Image className="mr-2 h-4 w-4" />
+              Logo
             </TabsTrigger>
             <TabsTrigger value="info">
               <Info className="mr-2 h-4 w-4" />
@@ -270,6 +354,92 @@ const Admin = () => {
                       'Simpan API Key'
                     )}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="logos">
+            <Card className="shadow-medium">
+              <CardHeader>
+                <CardTitle>Kelola Logo</CardTitle>
+                <CardDescription>
+                  Upload logo untuk header dan chatbot
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Logo Header */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base">Logo Header</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Logo yang ditampilkan di header halaman utama
+                      </p>
+                    </div>
+                  </div>
+                  {logoHeader && (
+                    <div className="border rounded-lg p-4 bg-muted/20">
+                      <img 
+                        src={logoHeader} 
+                        alt="Logo Header" 
+                        className="h-16 w-16 object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(file, 'header');
+                      }}
+                      disabled={uploadingLogo}
+                      className="flex-1"
+                    />
+                    {uploadingLogo && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  {/* Logo Chatbot */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base">Logo Chatbot</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Logo yang ditampilkan sebagai avatar chatbot
+                        </p>
+                      </div>
+                    </div>
+                    {logoChatbot && (
+                      <div className="border rounded-lg p-4 bg-muted/20">
+                        <img 
+                          src={logoChatbot} 
+                          alt="Logo Chatbot" 
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoUpload(file, 'chatbot');
+                        }}
+                        disabled={uploadingLogo}
+                        className="flex-1"
+                      />
+                      {uploadingLogo && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
