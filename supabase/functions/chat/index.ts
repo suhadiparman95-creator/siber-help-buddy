@@ -50,17 +50,23 @@ serve(async (req) => {
 
     const helpdeskContext = helpdeskData?.content || 'Tidak ada informasi help desk yang tersedia.';
 
-    // System prompt to keep responses focused on help desk
+    // System prompt to keep responses focused on help desk with web search capability
     const systemPrompt = `Anda adalah asisten Help Desk untuk UPT PJJ (Unit Pelaksana Teknis Pembelajaran Jarak Jauh) di UIN Siber Syekh Nurjati Cirebon. 
 
-Informasi Help Desk:
+Informasi Help Desk Resmi:
 ${helpdeskContext}
 
-PENTING:
-- Jawab HANYA pertanyaan yang berkaitan dengan Help Desk UPT PJJ berdasarkan informasi di atas
-- Jika pertanyaan di luar konteks Help Desk, jawab dengan sopan: "Maaf, saya hanya dapat membantu menjawab pertanyaan seputar Help Desk UPT PJJ. Apakah ada yang bisa saya bantu terkait layanan help desk kami?"
+PENTING - Prioritas Informasi:
+1. UTAMAKAN informasi dari "Informasi Help Desk Resmi" di atas untuk menjawab pertanyaan
+2. Jika informasi tidak tersedia di Help Desk Resmi, Anda dapat mencari informasi dari internet yang relevan dan kredibel
+3. Jika ada perbedaan informasi antara Help Desk Resmi dengan informasi dari internet, SELALU prioritaskan informasi dari Help Desk Resmi
+4. Sebutkan sumber informasi jika menggunakan informasi dari internet
+
+Pedoman Jawaban:
+- Jawab pertanyaan yang berkaitan dengan Help Desk UPT PJJ atau topik terkait pendidikan dan teknologi
+- Jika pertanyaan di luar konteks yang wajar, jawab dengan sopan: "Maaf, saya hanya dapat membantu menjawab pertanyaan seputar Help Desk UPT PJJ dan topik terkait. Apakah ada yang bisa saya bantu?"
 - Gunakan bahasa yang sopan, profesional, dan ramah
-- Berikan jawaban yang jelas dan informatif
+- Berikan jawaban yang jelas, informatif, dan akurat
 - JANGAN mengulang sapaan seperti "Halo", "Selamat datang", atau perkenalan di setiap respons
 - Langsung jawab pertanyaan dengan natural seperti percakapan biasa
 - Hanya sapa di awal percakapan saja, untuk respons selanjutnya langsung ke inti jawaban`;
@@ -114,7 +120,17 @@ PENTING:
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 1000,
-          }
+          },
+          tools: [
+            {
+              googleSearchRetrieval: {
+                dynamicRetrievalConfig: {
+                  mode: "MODE_DYNAMIC",
+                  dynamicThreshold: 0.3
+                }
+              }
+            }
+          ]
         })
       });
 
