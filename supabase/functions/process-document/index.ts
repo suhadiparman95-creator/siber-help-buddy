@@ -51,7 +51,16 @@ serve(async (req) => {
 
     // Convert to base64 for Gemini API
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Convert to base64 in chunks to avoid stack overflow with large files
+    const chunkSize = 8192;
+    let base64Pdf = '';
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      base64Pdf += String.fromCharCode(...chunk);
+    }
+    base64Pdf = btoa(base64Pdf);
 
     // Use Gemini with vision to extract and summarize PDF content
     const prompt = `Analisis dokumen PDF ini dan buat rangkuman yang komprehensif dan terstruktur. Fokus pada informasi yang relevan untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon. Jika dokumen berisi:
