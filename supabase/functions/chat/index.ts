@@ -38,17 +38,25 @@ serve(async (req) => {
       );
     }
 
-    // Get help desk information
-    const { data: helpdeskData, error: helpdeskError } = await supabase
-      .from('helpdesk_info')
-      .select('content')
-      .maybeSingle();
+    // Get all knowledge base summaries (more token-efficient than full content)
+    const { data: knowledgeData, error: knowledgeError } = await supabase
+      .from('knowledge_base')
+      .select('title, summary')
+      .order('created_at', { ascending: false });
 
-    if (helpdeskError) {
-      console.error('Helpdesk info error:', helpdeskError);
+    if (knowledgeError) {
+      console.error('Knowledge base error:', knowledgeError);
     }
 
-    const helpdeskContext = helpdeskData?.content || 'Tidak ada informasi help desk yang tersedia.';
+    // Build context from summaries
+    let helpdeskContext = '';
+    if (knowledgeData && knowledgeData.length > 0) {
+      helpdeskContext = knowledgeData
+        .map(kb => `${kb.title}:\n${kb.summary}`)
+        .join('\n\n---\n\n');
+    } else {
+      helpdeskContext = 'Tidak ada informasi help desk yang tersedia.';
+    }
 
     // System prompt to keep responses focused on help desk with web search capability
     const systemPrompt = `Anda adalah asisten Help Desk untuk UPT PJJ (Unit Pelaksana Teknis Pembelajaran Jarak Jauh) di UIN Siber Syekh Nurjati Cirebon. 

@@ -35,6 +35,39 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_base: {
+        Row: {
+          content: string
+          created_at: string
+          file_path: string | null
+          id: string
+          source_type: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          source_type: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          file_path?: string | null
+          id?: string
+          source_type?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string | null
