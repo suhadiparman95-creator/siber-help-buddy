@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Settings, Info, Home, Image, Upload } from 'lucide-react';
+import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText } from 'lucide-react';
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
@@ -20,12 +20,20 @@ const Admin = () => {
   const [logoChatbot, setLogoChatbot] = useState('');
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [faviconUrl, setFaviconUrl] = useState('');
+  
+  // Knowledge base states
+  const [knowledgeBase, setKnowledgeBase] = useState<any[]>([]);
+  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [selectedKnowledge, setSelectedKnowledge] = useState<any>(null);
+  const [editingSummary, setEditingSummary] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     checkAuth();
     loadSettings();
+    loadKnowledgeBase();
   }, []);
 
   const checkAuth = async () => {
@@ -171,6 +179,140 @@ const Admin = () => {
     }
   };
 
+  const loadKnowledgeBase = async () => {
+    setIsLoadingKnowledge(true);
+    try {
+      const { data, error } = await supabase
+        .from('knowledge_base')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setKnowledgeBase(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Gagal memuat knowledge base: ' + error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingKnowledge(false);
+    }
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: 'Error',
+        description: 'Hanya file PDF yang diperbolehkan',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'Ukuran file maksimal 10MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploadingPdf(true);
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('process-document', {
+        body: { filePath: fileName, title: file.name.replace('.pdf', '') }
+      });
+
+      if (functionError) throw functionError;
+
+      toast({
+        title: 'Berhasil',
+        description: 'PDF berhasil diupload dan diproses!',
+      });
+      loadKnowledgeBase();
+      e.target.value = '';
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal mengupload PDF: ' + error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
+
+  const handleDeleteKnowledge = async (id: string, filePath?: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus item ini?')) return;
+
+    try {
+      const { error: dbError } = await supabase
+        .from('knowledge_base')
+        .delete()
+        .eq('id', id);
+
+      if (dbError) throw dbError;
+
+      if (filePath) {
+        await supabase.storage.from('documents').remove([filePath]);
+      }
+
+      toast({
+        title: 'Berhasil',
+        description: 'Item berhasil dihapus',
+      });
+      loadKnowledgeBase();
+      setSelectedKnowledge(null);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Gagal menghapus item: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateSummary = async () => {
+    if (!selectedKnowledge) return;
+
+    try {
+      const { error } = await supabase
+        .from('knowledge_base')
+        .update({ summary: editingSummary })
+        .eq('id', selectedKnowledge.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Berhasil',
+        description: 'Rangkuman berhasil diupdate',
+      });
+      loadKnowledgeBase();
+      setSelectedKnowledge(null);
+      setEditingSummary('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Gagal mengupdate rangkuman: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleLogoUpload = async (file: File, type: 'header' | 'chatbot') => {
     setUploadingLogo(true);
 
@@ -293,10 +435,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="api" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="api">
               <Settings className="mr-2 h-4 w-4" />
               Pengaturan API
+            </TabsTrigger>
+            <TabsTrigger value="knowledge">
+              <FileText className="mr-2 h-4 w-4" />
+              Knowledge Base
             </TabsTrigger>
             <TabsTrigger value="logos">
               <Image className="mr-2 h-4 w-4" />
@@ -374,6 +520,125 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="knowledge">
+            <Card className="shadow-medium">
+              <CardHeader>
+                <CardTitle>Upload PDF Dokumen</CardTitle>
+                <CardDescription>
+                  Upload dokumen PDF seperti pengumuman atau informasi kampus. AI akan otomatis merangkum kontennya untuk menghemat token.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pdf-upload">Upload PDF (Max 10MB)</Label>
+                    <Input
+                      id="pdf-upload"
+                      type="file"
+                      accept=".pdf"
+                      onChange={handlePdfUpload}
+                      disabled={isUploadingPdf}
+                    />
+                  </div>
+                  {isUploadingPdf && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Memproses dokumen...
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-medium mt-6">
+              <CardHeader>
+                <CardTitle>Daftar Knowledge Base</CardTitle>
+                <CardDescription>
+                  Rangkuman informasi yang telah diproses oleh AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingKnowledge ? (
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Memuat...
+                  </p>
+                ) : knowledgeBase.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Belum ada knowledge base</p>
+                ) : (
+                  <div className="space-y-4">
+                    {knowledgeBase.map((kb) => (
+                      <Card key={kb.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1 flex-1">
+                              <CardTitle className="text-base">{kb.title}</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                {kb.source_type === 'pdf' ? '📄 PDF' : '📝 Text'} • {new Date(kb.created_at).toLocaleDateString('id-ID')}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedKnowledge(kb);
+                                  setEditingSummary(kb.summary || '');
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteKnowledge(kb.id, kb.file_path)}
+                              >
+                                Hapus
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm whitespace-pre-wrap">{kb.summary}</div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {selectedKnowledge && (
+              <Card className="shadow-medium mt-6">
+                <CardHeader>
+                  <CardTitle>Edit Rangkuman: {selectedKnowledge.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    value={editingSummary}
+                    onChange={(e) => setEditingSummary(e.target.value)}
+                    rows={10}
+                    placeholder="Edit rangkuman..."
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdateSummary}>
+                      Simpan Perubahan
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedKnowledge(null);
+                        setEditingSummary('');
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="logos">
