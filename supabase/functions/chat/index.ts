@@ -123,12 +123,7 @@ Pedoman Jawaban:
           },
           tools: [
             {
-              googleSearchRetrieval: {
-                dynamicRetrievalConfig: {
-                  mode: "MODE_DYNAMIC",
-                  dynamicThreshold: 0.3
-                }
-              }
+              googleSearch: {}
             }
           ]
         })
