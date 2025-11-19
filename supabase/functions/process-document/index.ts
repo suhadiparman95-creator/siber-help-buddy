@@ -63,14 +63,21 @@ serve(async (req) => {
     base64Pdf = btoa(base64Pdf);
 
     // Use Gemini with vision to extract and summarize PDF content
-    const prompt = `Analisis dokumen PDF ini dan buat rangkuman yang komprehensif dan terstruktur. Fokus pada informasi yang relevan untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon. Jika dokumen berisi:
+    const prompt = `Ekstrak HANYA informasi INTI dan PENTING dari dokumen PDF ini untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon. 
 
-- Pengumuman: Ringkas poin-poin penting, tanggal, dan action items
-- Prosedur/Panduan: Jelaskan langkah-langkah utama secara ringkas
-- Informasi Layanan: Detail layanan, kontak, dan cara penggunaan
-- Kebijakan: Poin-poin kebijakan utama dan implikasinya
+FOKUS pada:
+- Poin-poin kunci saja (bukan detail lengkap)
+- Tanggal penting
+- Kontak atau nomor yang relevan
+- Action items atau langkah yang harus dilakukan
+- Informasi yang sering ditanyakan
 
-Buat rangkuman yang jelas, terstruktur dengan bullet points atau numbering jika perlu, dan mudah dipahami.`;
+BUANG informasi yang:
+- Berulang atau redundan
+- Terlalu teknis atau administratif internal
+- Tidak relevan untuk pengguna Help Desk
+
+Format: Bullet points singkat dan padat. Maksimal 10 poin penting.`;
 
     // Discover available models
     let available: string[] = [];
