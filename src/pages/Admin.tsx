@@ -27,6 +27,9 @@ const Admin = () => {
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [selectedKnowledge, setSelectedKnowledge] = useState<any>(null);
   const [editingSummary, setEditingSummary] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [isProcessingUrl, setIsProcessingUrl] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -253,6 +256,51 @@ const Admin = () => {
       });
     } finally {
       setIsUploadingPdf(false);
+    }
+  };
+
+  const handleUrlSubmit = async (type: 'website' | 'video') => {
+    const url = type === 'website' ? websiteUrl : videoUrl;
+    if (!url) {
+      toast({
+        title: "Error",
+        description: "Masukkan URL yang valid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsProcessingUrl(true);
+    try {
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        'process-url',
+        {
+          body: { url, type }
+        }
+      );
+
+      if (functionError) throw functionError;
+
+      toast({
+        title: "Berhasil",
+        description: `${type === 'website' ? 'Website' : 'Video'} berhasil diproses!`,
+      });
+
+      if (type === 'website') {
+        setWebsiteUrl('');
+      } else {
+        setVideoUrl('');
+      }
+      loadKnowledgeBase();
+    } catch (error: any) {
+      console.error(`Error processing ${type}:`, error);
+      toast({
+        title: "Error",
+        description: `Gagal memproses ${type}: ` + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingUrl(false);
     }
   };
 
@@ -554,6 +602,84 @@ const Admin = () => {
 
             <Card className="shadow-medium mt-6">
               <CardHeader>
+                <CardTitle>Tambah dari Website</CardTitle>
+                <CardDescription>
+                  Masukkan URL website yang akan diproses oleh AI untuk knowledge base
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="website-url">URL Website</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="website-url"
+                        type="url"
+                        placeholder="https://example.com"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        disabled={isProcessingUrl}
+                      />
+                      <Button
+                        onClick={() => handleUrlSubmit('website')}
+                        disabled={isProcessingUrl || !websiteUrl}
+                      >
+                        {isProcessingUrl ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Proses'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-medium mt-6">
+              <CardHeader>
+                <CardTitle>Tambah dari Video</CardTitle>
+                <CardDescription>
+                  Masukkan URL video YouTube yang akan diproses oleh AI untuk knowledge base
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="video-url">URL Video YouTube</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="video-url"
+                        type="url"
+                        placeholder="https://youtube.com/watch?v=..."
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        disabled={isProcessingUrl}
+                      />
+                      <Button
+                        onClick={() => handleUrlSubmit('video')}
+                        disabled={isProcessingUrl || !videoUrl}
+                      >
+                        {isProcessingUrl ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Proses'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-medium mt-6">
+              <CardHeader>
                 <CardTitle>Daftar Knowledge Base</CardTitle>
                 <CardDescription>
                   Rangkuman informasi yang telah diproses oleh AI
@@ -576,7 +702,7 @@ const Admin = () => {
                             <div className="space-y-1 flex-1">
                               <CardTitle className="text-base">{kb.title}</CardTitle>
                               <p className="text-xs text-muted-foreground">
-                                {kb.source_type === 'pdf' ? '📄 PDF' : '📝 Text'} • {new Date(kb.created_at).toLocaleDateString('id-ID')}
+                                {kb.source_type === 'pdf' ? '📄 PDF' : kb.source_type === 'website' ? '🌐 Website' : kb.source_type === 'video' ? '🎥 Video' : '📝 Text'} • {new Date(kb.created_at).toLocaleDateString('id-ID')}
                               </p>
                             </div>
                             <div className="flex gap-2">
