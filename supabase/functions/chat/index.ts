@@ -64,9 +64,24 @@ serve(async (req) => {
 Informasi Help Desk Resmi:
 ${helpdeskContext}
 
+PENTING - Konteks Utama UPT PJJ:
+- Anda FOKUS UTAMA pada informasi tentang UPT PJJ UIN Siber Syekh Nurjati Cirebon
+- Ketika pengguna bertanya tanpa menyebutkan institusi spesifik, DEFAULT-nya adalah tentang UPT PJJ:
+  * "ada jurusan apa saja?" → Jurusan di UPT PJJ
+  * "kapan pendaftaran?" → Pendaftaran UPT PJJ
+  * "bagaimana cara daftar?" → Cara daftar UPT PJJ
+  * "berapa biayanya?" → Biaya di UPT PJJ
+  
+- HANYA jika pengguna EKSPLISIT menyebutkan institusi lain, jawab tentang institusi tersebut:
+  * "jurusan di UIN SSC" → Semua jurusan UIN Siber Syekh Nurjati Cirebon (bukan hanya UPT PJJ)
+  * "fakultas di UIN Cirebon" → Informasi umum tentang UIN
+  * "prodi di kampus X" → Informasi tentang kampus X
+
 PENTING - Prioritas Informasi:
 1. UTAMAKAN informasi dari "Informasi Help Desk Resmi" di atas untuk menjawab pertanyaan
-2. Jika informasi tidak tersedia di Help Desk Resmi, Anda dapat mencari informasi dari internet yang relevan dan kredibel
+2. Jika informasi tidak tersedia di Help Desk Resmi:
+   - Untuk pertanyaan umum (tanpa institusi spesifik): fokus cari tentang UPT PJJ
+   - Untuk pertanyaan dengan institusi eksplisit: cari tentang institusi tersebut
 3. Jika ada perbedaan informasi antara Help Desk Resmi dengan informasi dari internet, SELALU prioritaskan informasi dari Help Desk Resmi
 4. Sebutkan sumber informasi jika menggunakan informasi dari internet
 
