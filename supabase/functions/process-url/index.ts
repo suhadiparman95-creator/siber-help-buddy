@@ -73,36 +73,47 @@ serve(async (req) => {
 
     // Use Gemini to summarize the content
     const prompt = type === 'website' 
-      ? `Ekstrak HANYA informasi INTI dan PENTING dari konten website ini untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon.
+      ? `Ekstrak dan simpan SEMUA informasi LENGKAP dan RELEVAN dari konten website ini untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon.
 
-FOKUS pada:
-- Poin-poin kunci saja (bukan detail lengkap)
-- Tanggal penting
-- Kontak atau nomor yang relevan
-- Action items atau langkah yang harus dilakukan
-- Informasi yang sering ditanyakan
+TUJUAN: Simpan informasi selengkap mungkin agar chatbot dapat menjawab pertanyaan dengan detail.
 
-BUANG informasi yang:
-- Berulang atau redundan
-- Terlalu teknis atau administratif internal
-- Tidak relevan untuk pengguna Help Desk
+SIMPAN semua informasi tentang:
+- Program studi, jurusan, dan informasi akademik
+- Prosedur pendaftaran, syarat, dan jadwal
+- Biaya kuliah dan cara pembayaran
+- Kontak (telepon, email, WhatsApp, alamat)
+- Layanan yang tersedia dan cara mengaksesnya
+- Tanggal-tanggal penting
+- Persyaratan dan dokumen yang dibutuhkan
+- FAQ atau pertanyaan yang sering ditanyakan
+- Link-link penting dan informasi terkait
 
-Format: Bullet points singkat dan padat. Maksimal 10 poin penting.
+FILTER HANYA informasi yang:
+- Tidak relevan sama sekali dengan Help Desk/pendidikan (misal: iklan, navigasi website, footer generik)
+- Berulang/duplikat persis
+
+FORMAT: Tulis dalam paragraf yang terstruktur dan jelas. Gunakan heading dan bullet points untuk organisasi. Tidak ada batasan panjang - yang penting LENGKAP dan INFORMATIF.
 
 Konten website:
 ${content}`
-      : `Analisis video YouTube ini dan buat rangkuman informasi penting untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon.
+      : `Ekstrak dan simpan SEMUA informasi LENGKAP dan RELEVAN dari video YouTube ini untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon.
 
-FOKUS pada:
-- Topik utama video
-- Poin-poin penting yang relevan
-- Informasi kontak atau tindakan yang disebutkan
+TUJUAN: Simpan informasi selengkap mungkin dari video agar chatbot dapat menjawab pertanyaan dengan detail.
 
-Format: Bullet points singkat. Maksimal 8 poin penting.
+SIMPAN semua informasi tentang:
+- Topik utama dan sub-topik yang dibahas
+- Penjelasan detail tentang program/layanan yang disebutkan
+- Instruksi atau langkah-langkah yang dijelaskan
+- Informasi kontak atau cara menghubungi
+- Tanggal, jadwal, atau timeline yang disebutkan
+- Tips, saran, atau hal penting yang disampaikan
+- Link atau referensi yang disebutkan
+
+FORMAT: Tulis dalam paragraf yang terstruktur dan lengkap. Gunakan heading dan bullet points untuk organisasi. Tidak ada batasan panjang - yang penting LENGKAP dan INFORMATIF.
 
 URL Video: ${url}
 
-Catatan: Buat rangkuman berdasarkan konteks URL dan judul video. Jika tidak dapat mengakses konten video secara langsung, buat catatan bahwa ini adalah referensi video yang perlu ditonton untuk informasi lengkap.`;
+Catatan: Ekstrak informasi sebanyak mungkin dari judul, deskripsi, dan konteks URL video. Jika tidak dapat mengakses konten video secara langsung, tulis bahwa ini adalah referensi video YouTube dengan informasi yang perlu ditonton langsung untuk detail lengkap, namun tetap berikan konteks dari judul dan URL.`;
 
     // Discover available models
     let available: string[] = [];
@@ -145,15 +156,15 @@ Catatan: Buat rangkuman berdasarkan konteks URL dan judul video. Jika tidak dapa
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ text: prompt }]
-              }],
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 2048,
-              }
-            })
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 8192,
+            }
+          })
           }
         );
 
