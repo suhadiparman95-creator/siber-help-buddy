@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText } from 'lucide-react';
+import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText, Globe, Video, ChevronDown } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
@@ -573,23 +575,22 @@ const Admin = () => {
           <TabsContent value="knowledge">
             <Card className="shadow-medium">
               <CardHeader>
-                <CardTitle>Upload PDF Dokumen</CardTitle>
+                <CardTitle>Tambah ke Knowledge Base</CardTitle>
                 <CardDescription>
-                  Upload dokumen PDF seperti pengumuman atau informasi kampus. AI akan otomatis merangkum kontennya untuk menghemat token.
+                  Upload PDF, tambahkan URL website, atau URL video YouTube
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="pdf-upload">Upload PDF (Max 10MB)</Label>
-                    <Input
-                      id="pdf-upload"
-                      type="file"
-                      accept=".pdf"
-                      onChange={handlePdfUpload}
-                      disabled={isUploadingPdf}
-                    />
-                  </div>
+              <CardContent className="space-y-6">
+                {/* PDF Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="pdf-upload">Upload PDF (Max 10MB)</Label>
+                  <Input
+                    id="pdf-upload"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handlePdfUpload}
+                    disabled={isUploadingPdf}
+                  />
                   {isUploadingPdf && (
                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -597,82 +598,64 @@ const Admin = () => {
                     </p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card className="shadow-medium mt-6">
-              <CardHeader>
-                <CardTitle>Tambah dari Website</CardTitle>
-                <CardDescription>
-                  Masukkan URL website yang akan diproses oleh AI untuk knowledge base
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="website-url">URL Website</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="website-url"
-                        type="url"
-                        placeholder="https://example.com"
-                        value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                        disabled={isProcessingUrl}
-                      />
-                      <Button
-                        onClick={() => handleUrlSubmit('website')}
-                        disabled={isProcessingUrl || !websiteUrl}
-                      >
-                        {isProcessingUrl ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          'Proses'
-                        )}
-                      </Button>
-                    </div>
+                <Separator />
+
+                {/* Website URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="website-url">URL Website</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="website-url"
+                      type="url"
+                      placeholder="https://example.com"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      disabled={isProcessingUrl}
+                    />
+                    <Button
+                      onClick={() => handleUrlSubmit('website')}
+                      disabled={isProcessingUrl || !websiteUrl}
+                    >
+                      {isProcessingUrl ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Proses
+                        </>
+                      ) : (
+                        'Tambah'
+                      )}
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card className="shadow-medium mt-6">
-              <CardHeader>
-                <CardTitle>Tambah dari Video</CardTitle>
-                <CardDescription>
-                  Masukkan URL video YouTube yang akan diproses oleh AI untuk knowledge base
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="video-url">URL Video YouTube</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="video-url"
-                        type="url"
-                        placeholder="https://youtube.com/watch?v=..."
-                        value={videoUrl}
-                        onChange={(e) => setVideoUrl(e.target.value)}
-                        disabled={isProcessingUrl}
-                      />
-                      <Button
-                        onClick={() => handleUrlSubmit('video')}
-                        disabled={isProcessingUrl || !videoUrl}
-                      >
-                        {isProcessingUrl ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          'Proses'
-                        )}
-                      </Button>
-                    </div>
+                <Separator />
+
+                {/* Video URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="video-url">URL Video YouTube</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="video-url"
+                      type="url"
+                      placeholder="https://youtube.com/watch?v=..."
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      disabled={isProcessingUrl}
+                    />
+                    <Button
+                      onClick={() => handleUrlSubmit('video')}
+                      disabled={isProcessingUrl || !videoUrl}
+                    >
+                      {isProcessingUrl ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Proses
+                        </>
+                      ) : (
+                        'Tambah'
+                      )}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -694,42 +677,55 @@ const Admin = () => {
                 ) : knowledgeBase.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Belum ada knowledge base</p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {knowledgeBase.map((kb) => (
-                      <Card key={kb.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1 flex-1">
-                              <CardTitle className="text-base">{kb.title}</CardTitle>
-                              <p className="text-xs text-muted-foreground">
-                                {kb.source_type === 'pdf' ? '📄 PDF' : kb.source_type === 'website' ? '🌐 Website' : kb.source_type === 'video' ? '🎥 Video' : '📝 Text'} • {new Date(kb.created_at).toLocaleDateString('id-ID')}
-                              </p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedKnowledge(kb);
-                                  setEditingSummary(kb.summary || '');
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteKnowledge(kb.id, kb.file_path)}
-                              >
-                                Hapus
-                              </Button>
-                            </div>
+                      <Collapsible key={kb.id}>
+                        <div className="border rounded-lg">
+                          <div className="flex items-center justify-between p-4">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 hover:opacity-80 transition-opacity text-left">
+                              {kb.source_type === 'pdf' && <FileText className="h-5 w-5 text-blue-500 flex-shrink-0" />}
+                              {kb.source_type === 'website' && <Globe className="h-5 w-5 text-green-500 flex-shrink-0" />}
+                              {kb.source_type === 'video' && <Video className="h-5 w-5 text-red-500 flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium break-words">{kb.title}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(kb.created_at).toLocaleDateString('id-ID')}
+                                </p>
+                              </div>
+                              <ChevronDown className="h-5 w-5 transition-transform duration-200 flex-shrink-0" />
+                            </CollapsibleTrigger>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteKnowledge(kb.id, kb.file_path)}
+                              className="ml-2"
+                            >
+                              Hapus
+                            </Button>
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-sm whitespace-pre-wrap">{kb.summary}</div>
-                        </CardContent>
-                      </Card>
+                          
+                          <CollapsibleContent>
+                            <div className="px-4 pb-4 border-t pt-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <Label className="text-sm font-medium">Ringkasan AI:</Label>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedKnowledge(kb);
+                                    setEditingSummary(kb.summary || '');
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                              <div className="bg-muted p-3 rounded-md text-sm whitespace-pre-wrap">
+                                {kb.summary}
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
                     ))}
                   </div>
                 )}
