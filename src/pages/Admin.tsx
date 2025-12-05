@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText, Globe, Video, ChevronDown } from 'lucide-react';
+import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText, Globe, Video, ChevronDown, Phone } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -32,6 +32,14 @@ const Admin = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [isProcessingUrl, setIsProcessingUrl] = useState(false);
+  
+  // Contact states
+  const [contactWhatsapp, setContactWhatsapp] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactHours, setContactHours] = useState("");
+  const [savingContacts, setSavingContacts] = useState(false);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -101,6 +109,21 @@ const Admin = () => {
 
       if (helpdeskData) {
         setHelpdeskInfo(helpdeskData.content || '');
+      }
+
+      // Load contact settings
+      const { data: contactData } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['contact_whatsapp', 'contact_email', 'contact_phone', 'contact_hours']);
+
+      if (contactData) {
+        contactData.forEach(item => {
+          if (item.key === 'contact_whatsapp') setContactWhatsapp(item.value || '');
+          if (item.key === 'contact_email') setContactEmail(item.value || '');
+          if (item.key === 'contact_phone') setContactPhone(item.value || '');
+          if (item.key === 'contact_hours') setContactHours(item.value || '');
+        });
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -459,6 +482,41 @@ const Admin = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveContacts = async () => {
+    setSavingContacts(true);
+
+    try {
+      const contactSettings = [
+        { key: 'contact_whatsapp', value: contactWhatsapp },
+        { key: 'contact_email', value: contactEmail },
+        { key: 'contact_phone', value: contactPhone },
+        { key: 'contact_hours', value: contactHours },
+      ];
+
+      for (const setting of contactSettings) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert(setting);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Berhasil',
+        description: 'Informasi kontak berhasil disimpan',
+      });
+    } catch (error) {
+      console.error('Error saving contacts:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal menyimpan informasi kontak',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingContacts(false);
     }
   };
 
@@ -1003,6 +1061,76 @@ const Admin = () => {
                     </>
                   ) : (
                     'Simpan Informasi'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-medium mt-6">
+              <CardHeader>
+                <CardTitle>Kontak Bantuan</CardTitle>
+                <CardDescription>
+                  Informasi kontak yang ditampilkan jika chatbot tidak bisa menjawab pertanyaan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-whatsapp">WhatsApp</Label>
+                    <Input
+                      id="contact-whatsapp"
+                      placeholder="0812-3456-7890"
+                      value={contactWhatsapp}
+                      onChange={(e) => setContactWhatsapp(e.target.value)}
+                      disabled={savingContacts}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-email">Email</Label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      placeholder="uptpjj@uinssc.ac.id"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      disabled={savingContacts}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-phone">Telepon</Label>
+                    <Input
+                      id="contact-phone"
+                      placeholder="(0231) 123456"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      disabled={savingContacts}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-hours">Jam Operasional</Label>
+                    <Input
+                      id="contact-hours"
+                      placeholder="Senin-Jumat, 08.00-16.00 WIB"
+                      value={contactHours}
+                      onChange={(e) => setContactHours(e.target.value)}
+                      disabled={savingContacts}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Kontak ini akan ditampilkan oleh chatbot saat tidak dapat menjawab pertanyaan pengguna
+                </p>
+                <Button 
+                  onClick={saveContacts}
+                  disabled={savingContacts}
+                >
+                  {savingContacts ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    'Simpan Kontak'
                   )}
                 </Button>
               </CardContent>
