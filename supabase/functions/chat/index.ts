@@ -48,12 +48,39 @@ serve(async (req) => {
       console.error('Knowledge base error:', knowledgeError);
     }
 
-    // Build context from summaries
-    let helpdeskContext = '';
+    // Get helpdesk_info content
+    const { data: helpdeskInfoData, error: helpdeskInfoError } = await supabase
+      .from('helpdesk_info')
+      .select('content')
+      .order('created_at', { ascending: false });
+
+    if (helpdeskInfoError) {
+      console.error('Helpdesk info error:', helpdeskInfoError);
+    }
+
+    // Build context from knowledge base summaries
+    let knowledgeContext = '';
     if (knowledgeData && knowledgeData.length > 0) {
-      helpdeskContext = knowledgeData
+      knowledgeContext = knowledgeData
         .map(kb => `${kb.title}:\n${kb.summary}`)
         .join('\n\n---\n\n');
+    }
+
+    // Build context from helpdesk info
+    let helpdeskInfoContext = '';
+    if (helpdeskInfoData && helpdeskInfoData.length > 0) {
+      helpdeskInfoContext = helpdeskInfoData
+        .map(info => info.content)
+        .join('\n\n---\n\n');
+    }
+
+    // Combine both contexts
+    let helpdeskContext = '';
+    if (knowledgeContext || helpdeskInfoContext) {
+      helpdeskContext = [
+        knowledgeContext ? `=== KNOWLEDGE BASE ===\n${knowledgeContext}` : '',
+        helpdeskInfoContext ? `=== KONTEN INFORMASI ===\n${helpdeskInfoContext}` : ''
+      ].filter(Boolean).join('\n\n');
     } else {
       helpdeskContext = 'Tidak ada informasi help desk yang tersedia.';
     }
@@ -78,12 +105,27 @@ PENTING - Konteks Utama UPT PJJ:
   * "prodi di kampus X" → Informasi tentang kampus X
 
 PENTING - Prioritas Informasi:
-1. UTAMAKAN informasi dari "Informasi Help Desk Resmi" di atas untuk menjawab pertanyaan
+1. UTAMAKAN informasi dari "Informasi Help Desk Resmi" di atas (Knowledge Base dan Konten Informasi) untuk menjawab pertanyaan
 2. Jika informasi tidak tersedia di Help Desk Resmi:
    - Untuk pertanyaan umum (tanpa institusi spesifik): fokus cari tentang UPT PJJ
    - Untuk pertanyaan dengan institusi eksplisit: cari tentang institusi tersebut
 3. Jika ada perbedaan informasi antara Help Desk Resmi dengan informasi dari internet, SELALU prioritaskan informasi dari Help Desk Resmi
 4. Sebutkan sumber informasi jika menggunakan informasi dari internet
+
+PENTING - Informasi Kontak Bantuan:
+Jika Anda tidak dapat menjawab pertanyaan dengan yakin atau pertanyaan memerlukan penanganan langsung dari tim, SELALU sertakan informasi kontak berikut di akhir jawaban:
+
+📞 **Hubungi Kami untuk Bantuan Lebih Lanjut:**
+- WhatsApp: 0812-3456-7890
+- Email: uptpjj@uinssc.ac.id
+- Telepon: (0231) 123456
+- Jam Operasional: Senin-Jumat, 08.00-16.00 WIB
+
+Gunakan informasi kontak ini ketika:
+- Pertanyaan teknis yang kompleks (masalah login, error sistem, dll)
+- Pertanyaan administratif yang memerlukan verifikasi data
+- Keluhan atau masalah yang perlu ditangani langsung
+- Informasi yang tidak tersedia dalam knowledge base
 
 Pedoman Jawaban:
 - Jawab pertanyaan yang berkaitan dengan Help Desk UPT PJJ atau topik terkait pendidikan dan teknologi
