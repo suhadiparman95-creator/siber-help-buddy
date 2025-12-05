@@ -85,6 +85,24 @@ serve(async (req) => {
       helpdeskContext = 'Tidak ada informasi help desk yang tersedia.';
     }
 
+    // Get contact settings
+    const { data: contactData } = await supabase
+      .from('settings')
+      .select('key, value')
+      .in('key', ['contact_whatsapp', 'contact_email', 'contact_phone', 'contact_hours']);
+
+    const contacts: Record<string, string> = {};
+    if (contactData) {
+      contactData.forEach(item => {
+        contacts[item.key] = item.value || '';
+      });
+    }
+
+    const contactWhatsapp = contacts['contact_whatsapp'] || '0812-3456-7890';
+    const contactEmail = contacts['contact_email'] || 'uptpjj@uinssc.ac.id';
+    const contactPhone = contacts['contact_phone'] || '(0231) 123456';
+    const contactHours = contacts['contact_hours'] || 'Senin-Jumat, 08.00-16.00 WIB';
+
     // System prompt to keep responses focused on help desk with web search capability
     const systemPrompt = `Anda adalah asisten Help Desk untuk UPT PJJ (Unit Pelaksana Teknis Pembelajaran Jarak Jauh) di UIN Siber Syekh Nurjati Cirebon. 
 
@@ -116,10 +134,10 @@ PENTING - Informasi Kontak Bantuan:
 Jika Anda tidak dapat menjawab pertanyaan dengan yakin atau pertanyaan memerlukan penanganan langsung dari tim, SELALU sertakan informasi kontak berikut di akhir jawaban:
 
 📞 **Hubungi Kami untuk Bantuan Lebih Lanjut:**
-- WhatsApp: 0812-3456-7890
-- Email: uptpjj@uinssc.ac.id
-- Telepon: (0231) 123456
-- Jam Operasional: Senin-Jumat, 08.00-16.00 WIB
+- WhatsApp: ${contactWhatsapp}
+- Email: ${contactEmail}
+- Telepon: ${contactPhone}
+- Jam Operasional: ${contactHours}
 
 Gunakan informasi kontak ini ketika:
 - Pertanyaan teknis yang kompleks (masalah login, error sistem, dll)
