@@ -15,8 +15,6 @@ import EmbedSettings from '@/components/admin/EmbedSettings';
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [helpdeskInfo, setHelpdeskInfo] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoHeader, setLogoHeader] = useState('');
@@ -59,17 +57,6 @@ const Admin = () => {
 
   const loadSettings = async () => {
     try {
-      // Load API key
-      const { data: apiKeyData } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'gemini_api_key')
-        .single();
-
-      if (apiKeyData) {
-        setApiKey(apiKeyData.value || '');
-      }
-
       // Load logo URLs
       const { data: logoHeaderData } = await supabase
         .from('settings')
@@ -134,78 +121,6 @@ const Admin = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/auth');
-  };
-
-  const testConnection = async () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Masukkan API key terlebih dahulu',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setTestingConnection(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('test-gemini', {
-        body: { apiKey }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: 'Berhasil',
-          description: data.message,
-        });
-      } else {
-        toast({
-          title: 'Gagal',
-          description: data.error || 'Koneksi gagal',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Test connection error:', error);
-      toast({
-        title: 'Error',
-        description: 'Terjadi kesalahan saat menguji koneksi',
-        variant: 'destructive',
-      });
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  const saveApiKey = async () => {
-    setLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('settings')
-        .upsert({
-          key: 'gemini_api_key',
-          value: apiKey,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Berhasil',
-        description: 'API key berhasil disimpan',
-      });
-    } catch (error) {
-      console.error('Error saving API key:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal menyimpan API key',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const loadKnowledgeBase = async () => {
@@ -574,62 +489,23 @@ const Admin = () => {
           <TabsContent value="api">
             <Card className="shadow-medium">
               <CardHeader>
-                <CardTitle>Gemini API Key</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-primary" />
+                  Status AI
+                </CardTitle>
                 <CardDescription>
-                  Konfigurasi API key untuk menggunakan Gemini AI
+                  Konfigurasi AI untuk chatbot Help Desk
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="apikey">API Key</Label>
-                  <Input
-                    id="apikey"
-                    type="password"
-                    placeholder="Masukkan Gemini API key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Dapatkan API key dari{' '}
-                    <a 
-                      href="https://makersuite.google.com/app/apikey" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      Google AI Studio
-                    </a>
+              <CardContent>
+                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="font-medium">AI Aktif</span>
+                  </div>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                    Chatbot menggunakan Lovable AI dan tidak memerlukan konfigurasi API key manual.
                   </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={testConnection} 
-                    variant="outline"
-                    disabled={testingConnection || !apiKey.trim()}
-                  >
-                    {testingConnection ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Menguji...
-                      </>
-                    ) : (
-                      'Cek Koneksi'
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={saveApiKey}
-                    disabled={loading || !apiKey.trim()}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      'Simpan API Key'
-                    )}
-                  </Button>
                 </div>
               </CardContent>
             </Card>
