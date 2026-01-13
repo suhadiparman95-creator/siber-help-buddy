@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,18 +21,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get Gemini API key
-    const { data: settingsData } = await supabaseClient
-      .from('settings')
-      .select('value')
-      .eq('key', 'gemini_api_key')
-      .single();
-
-    if (!settingsData?.value) {
-      throw new Error('Gemini API key not found');
+    // Get Lovable AI API key
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'AI API key tidak dikonfigurasi.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const geminiApiKey = settingsData.value;
     let content = '';
     let title = '';
 
@@ -71,7 +69,7 @@ serve(async (req) => {
       // This is a simplified approach
     }
 
-    // Use Gemini to summarize the content
+    // Build prompt for summarization
     const prompt = type === 'website' 
       ? `Ekstrak dan simpan SEMUA informasi LENGKAP dan RELEVAN dari konten website ini untuk Help Desk UPT PJJ UIN Siber Syekh Nurjati Cirebon.
 
@@ -115,91 +113,59 @@ URL Video: ${url}
 
 Catatan: Ekstrak informasi sebanyak mungkin dari judul, deskripsi, dan konteks URL video. Jika tidak dapat mengakses konten video secara langsung, tulis bahwa ini adalah referensi video YouTube dengan informasi yang perlu ditonton langsung untuk detail lengkap, namun tetap berikan konteks dari judul dan URL.`;
 
-    // Discover available models
-    let available: string[] = [];
-    try {
-      const modelsResponse = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models?key=' + geminiApiKey
-      );
-      const modelsData = await modelsResponse.json();
-      available = modelsData.models
-        ?.filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-        .map((m: any) => m.name.replace('models/', '')) || [];
-      console.log('Available models:', available);
-    } catch (e) {
-      console.error('Failed to fetch models, using defaults:', e);
-      available = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest'];
-    }
+    // Call Lovable AI Gateway
+    console.log('Calling Lovable AI Gateway for summarization...');
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: "Anda adalah asisten yang ahli dalam mengekstrak dan meringkas informasi dari konten web untuk keperluan Help Desk pendidikan." },
+          { role: "user", content: prompt }
+        ],
+      }),
+    });
 
-    const preferredModels = [
-      'gemini-2.0-flash-exp',
-      'gemini-exp-1206', 
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest'
-    ];
-
-    const orderedModels = [
-      ...preferredModels.filter(m => available.includes(m)),
-      ...available.filter(m => !preferredModels.includes(m))
-    ];
-
-    if (orderedModels.length === 0) {
-      throw new Error('No suitable Gemini models available');
-    }
-
-    let summary = '';
-    for (const model of orderedModels) {
-      try {
-        console.log(`Attempting with model: ${model}`);
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-              temperature: 0.4,
-              maxOutputTokens: 8192,
-            }
-          })
-          }
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        console.error('Rate limit exceeded');
+        return new Response(
+          JSON.stringify({ error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-
-        if (!geminiResponse.ok) {
-          const errorText = await geminiResponse.text();
-          console.error(`Model ${model} failed:`, errorText);
-          continue;
-        }
-
-        const geminiData = await geminiResponse.json();
-        summary = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        if (summary) {
-          console.log(`Successfully generated summary with model: ${model}`);
-          break;
-        }
-      } catch (error) {
-        console.error(`Error with model ${model}:`, error);
-        continue;
       }
+      if (aiResponse.status === 402) {
+        console.error('Payment required');
+        return new Response(
+          JSON.stringify({ error: 'Kredit AI habis. Silakan hubungi administrator.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const errorText = await aiResponse.text();
+      console.error('AI gateway error:', aiResponse.status, errorText);
+      throw new Error('Gagal menghubungi layanan AI');
     }
+
+    const aiData = await aiResponse.json();
+    const summary = aiData.choices?.[0]?.message?.content || '';
 
     if (!summary) {
-      throw new Error('Failed to generate summary with any available model');
+      throw new Error('Failed to generate summary');
     }
+
+    console.log('Successfully generated summary');
 
     // Store in knowledge_base
     const { error: insertError } = await supabaseClient
       .from('knowledge_base')
       .insert({
-        title,
-        content: url,
+        source: title || url,
         summary,
-        source_type: type,
-        file_path: url
+        type: type === 'website' ? 'url' : 'video'
       });
 
     if (insertError) {
