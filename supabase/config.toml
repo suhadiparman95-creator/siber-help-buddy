@@ -1,13 +1,1 @@
-project_id = "kiemseovvsaholkjpanj"
-
-[functions.chat]
-verify_jwt = false
-
-[functions.test-gemini]
-verify_jwt = false
-
-[functions.process-document]
-verify_jwt = false
-
-[functions.process-url]
-verify_jwt = false
+project_id = "lhnktxokjusmfycccyco"

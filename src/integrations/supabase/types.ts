@@ -10,84 +10,78 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
       helpdesk_info: {
         Row: {
           content: string
-          created_at: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      knowledge_base: {
-        Row: {
-          content: string
           created_at: string
-          file_path: string | null
           id: string
-          source_type: string
-          summary: string | null
-          title: string
           updated_at: string
         }
         Insert: {
           content: string
           created_at?: string
-          file_path?: string | null
           id?: string
-          source_type: string
-          summary?: string | null
-          title: string
           updated_at?: string
         }
         Update: {
           content?: string
           created_at?: string
-          file_path?: string | null
           id?: string
-          source_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      knowledge_base: {
+        Row: {
+          created_at: string
+          id: string
+          source: string
+          summary: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source: string
           summary?: string | null
-          title?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source?: string
+          summary?: string | null
+          type?: string
           updated_at?: string
         }
         Relationships: []
       }
       settings: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           key: string
-          updated_at: string | null
+          updated_at: string
           value: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           key: string
-          updated_at?: string | null
+          updated_at?: string
           value?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           key?: string
-          updated_at?: string | null
+          updated_at?: string
           value?: string | null
         }
         Relationships: []
