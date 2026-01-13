@@ -23,25 +23,20 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get API key from settings
-    const { data: apiKeyData, error: apiKeyError } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'gemini_api_key')
-      .maybeSingle();
-
-    if (apiKeyError || !apiKeyData?.value) {
-      console.error('API key error:', apiKeyError);
+    // Get Lovable AI API key
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not configured');
       return new Response(
-        JSON.stringify({ error: 'Gemini API key tidak ditemukan. Silakan konfigurasikan di panel admin.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'AI API key tidak dikonfigurasi.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get all knowledge base summaries (more token-efficient than full content)
+    // Get all knowledge base summaries
     const { data: knowledgeData, error: knowledgeError } = await supabase
       .from('knowledge_base')
-      .select('title, summary')
+      .select('source, summary')
       .order('created_at', { ascending: false });
 
     if (knowledgeError) {
@@ -62,7 +57,7 @@ serve(async (req) => {
     let knowledgeContext = '';
     if (knowledgeData && knowledgeData.length > 0) {
       knowledgeContext = knowledgeData
-        .map(kb => `${kb.title}:\n${kb.summary}`)
+        .map(kb => `${kb.source}:\n${kb.summary || 'Tidak ada ringkasan'}`)
         .join('\n\n---\n\n');
     }
 
@@ -103,7 +98,7 @@ serve(async (req) => {
     const contactPhone = contacts['contact_phone'] || '(0231) 123456';
     const contactHours = contacts['contact_hours'] || 'Senin-Jumat, 08.00-16.00 WIB';
 
-    // System prompt to keep responses focused on help desk with web search capability
+    // System prompt
     const systemPrompt = `Anda adalah asisten Help Desk untuk UPT PJJ (Unit Pelaksana Teknis Pembelajaran Jarak Jauh) di UIN Siber Syekh Nurjati Cirebon. 
 
 Informasi Help Desk Resmi:
@@ -117,18 +112,12 @@ PENTING - Konteks Utama UPT PJJ:
   * "bagaimana cara daftar?" → Cara daftar UPT PJJ
   * "berapa biayanya?" → Biaya di UPT PJJ
   
-- HANYA jika pengguna EKSPLISIT menyebutkan institusi lain, jawab tentang institusi tersebut:
-  * "jurusan di UIN SSC" → Semua jurusan UIN Siber Syekh Nurjati Cirebon (bukan hanya UPT PJJ)
-  * "fakultas di UIN Cirebon" → Informasi umum tentang UIN
-  * "prodi di kampus X" → Informasi tentang kampus X
+- HANYA jika pengguna EKSPLISIT menyebutkan institusi lain, jawab tentang institusi tersebut
 
 PENTING - Prioritas Informasi:
 1. UTAMAKAN informasi dari "Informasi Help Desk Resmi" di atas (Knowledge Base dan Konten Informasi) untuk menjawab pertanyaan
-2. Jika informasi tidak tersedia di Help Desk Resmi:
-   - Untuk pertanyaan umum (tanpa institusi spesifik): fokus cari tentang UPT PJJ
-   - Untuk pertanyaan dengan institusi eksplisit: cari tentang institusi tersebut
-3. Jika ada perbedaan informasi antara Help Desk Resmi dengan informasi dari internet, SELALU prioritaskan informasi dari Help Desk Resmi
-4. Sebutkan sumber informasi jika menggunakan informasi dari internet
+2. Jika informasi tidak tersedia di Help Desk Resmi, berikan informasi umum yang relevan
+3. Jika ada perbedaan informasi, SELALU prioritaskan informasi dari Help Desk Resmi
 
 PENTING - Informasi Kontak Bantuan:
 Jika Anda tidak dapat menjawab pertanyaan dengan yakin atau pertanyaan memerlukan penanganan langsung dari tim, SELALU sertakan informasi kontak berikut di akhir jawaban:
@@ -151,87 +140,49 @@ Pedoman Jawaban:
 - Gunakan bahasa yang sopan, profesional, dan ramah
 - Berikan jawaban yang jelas, informatif, dan akurat
 - JANGAN mengulang sapaan seperti "Halo", "Selamat datang", atau perkenalan di setiap respons
-- Langsung jawab pertanyaan dengan natural seperti percakapan biasa
-- Hanya sapa di awal percakapan saja, untuk respons selanjutnya langsung ke inti jawaban`;
+- Langsung jawab pertanyaan dengan natural seperti percakapan biasa`;
 
-    // Discover available models dynamically and prefer stable ones
-    let available: string[] = [];
-    try {
-      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeyData.value}`;
-      const listResp = await fetch(listUrl, { method: 'GET' });
-      if (listResp.ok) {
-        const listJson = await listResp.json();
-        const models = listJson.models as Array<{ name: string; supported_generation_methods?: string[] }>;
-        available = (models || [])
-          .filter(m => (m.supported_generation_methods || []).includes('generateContent'))
-          .map(m => (m.name || '').replace(/^models\//, ''))
-          .filter(Boolean);
-      } else {
-        console.error('Failed to list models:', await listResp.text());
+    // Call Lovable AI Gateway
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.error('Rate limit exceeded');
+        return new Response(
+          JSON.stringify({ error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    } catch (e) {
-      console.error('Error listing models:', e);
-    }
-
-    const preferred = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-    const orderedCandidates = Array.from(new Set([
-      ...preferred.filter(m => available.includes(m)),
-      ...available,
-      ...preferred, // fallback
-    ]));
-
-    let success = false;
-    let reply = 'Maaf, terjadi kesalahan dalam memproses permintaan Anda.';
-    let lastErr = '';
-
-    for (const model of orderedCandidates) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeyData.value}`;
-      const geminiResponse = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: systemPrompt },
-                { text: `User: ${message}` }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000,
-          },
-          tools: [
-            {
-              googleSearch: {}
-            }
-          ]
-        })
-      });
-
-      if (!geminiResponse.ok) {
-        const errorText = await geminiResponse.text();
-        lastErr = `Gemini API error for ${model}: ${errorText}`;
-        console.error(lastErr);
-        continue;
+      if (response.status === 402) {
+        console.error('Payment required');
+        return new Response(
+          JSON.stringify({ error: 'Kredit AI habis. Silakan hubungi administrator.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-
-      const geminiData = await geminiResponse.json();
-      reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || reply;
-      success = true;
-      break;
-    }
-
-    if (!success) {
+      const errorText = await response.text();
+      console.error('AI gateway error:', response.status, errorText);
       return new Response(
-        JSON.stringify({ error: 'Tidak dapat menghubungkan ke Gemini API. ' + (lastErr || '') }),
+        JSON.stringify({ error: 'Gagal menghubungi layanan AI.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || 'Maaf, saya tidak dapat memberikan respons saat ini.';
 
     return new Response(
       JSON.stringify({ reply }),
