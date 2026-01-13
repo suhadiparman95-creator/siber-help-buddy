@@ -128,25 +128,145 @@ const EmbedChat = () => {
     }
   };
 
-  // Widget button when closed
-  if (isWidget && !isOpen) {
+  // Widget mode: show only floating button when closed, chat window when open
+  if (isWidget) {
+    if (!isOpen) {
+      return (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{ backgroundColor: primaryColor }}
+          className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+      );
+    }
+
+    // Widget open state
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        style={{ backgroundColor: primaryColor }}
-        className="fixed bottom-4 right-4 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:opacity-90 transition-opacity z-50"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </button>
+      <div className="w-96 h-[500px] flex flex-col bg-white rounded-lg shadow-2xl overflow-hidden">
+        {/* Header */}
+        <header 
+          style={{ backgroundColor: primaryColor }}
+          className="px-4 py-3 flex items-center justify-between text-white"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+              {logoChatbot ? (
+                <img src={logoChatbot} alt="Chatbot" className="w-full h-full object-cover" />
+              ) : (
+                <Bot className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <h1 className="font-semibold text-sm">Help Desk UPT PJJ</h1>
+              <p className="text-xs opacity-80">Online</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="p-1 hover:bg-white/20 rounded transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+
+        {/* Chat Area */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-3">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {message.role === 'assistant' && (
+                <div 
+                  style={{ backgroundColor: primaryColor }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                >
+                  {logoChatbot ? (
+                    <img src={logoChatbot} alt="Bot" className="w-full h-full object-cover" />
+                  ) : (
+                    <Bot className="h-3 w-3 text-white" />
+                  )}
+                </div>
+              )}
+              <Card
+                className={`max-w-[80%] p-3 ${
+                  message.role === 'user'
+                    ? 'text-white'
+                    : 'bg-white'
+                }`}
+                style={message.role === 'user' ? { backgroundColor: primaryColor } : {}}
+              >
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="text-xs opacity-60 mt-1">
+                  {message.timestamp.toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </Card>
+              {message.role === 'user' && (
+                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                  <User className="h-3 w-3 text-gray-600" />
+                </div>
+              )}
+            </div>
+          ))}
+          {loading && (
+            <div className="flex gap-2 justify-start">
+              <div 
+                style={{ backgroundColor: primaryColor }}
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+              >
+                <Bot className="h-3 w-3 text-white" />
+              </div>
+              <Card className="max-w-[80%] p-3 bg-white">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <p className="text-xs text-gray-500">Mengetik...</p>
+                </div>
+              </Card>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </main>
+
+        {/* Input Area */}
+        <footer className="bg-white border-t p-3">
+          <form onSubmit={sendMessage} className="flex gap-2">
+            <Input
+              placeholder="Ketik pesan..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
+              className="flex-1 text-sm"
+            />
+            <Button 
+              type="submit" 
+              disabled={loading || !input.trim()}
+              style={{ backgroundColor: primaryColor }}
+              className="hover:opacity-90"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </footer>
+      </div>
     );
   }
 
+  // Full page mode (non-widget)
   return (
-    <div className={`${isWidget ? 'fixed bottom-4 right-4 w-96 h-[500px] z-50' : 'w-full h-screen'} flex flex-col bg-white rounded-lg shadow-2xl overflow-hidden`}>
+    <div className="w-full h-screen flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <header 
         style={{ backgroundColor: primaryColor }}
-        className="px-4 py-3 flex items-center justify-between text-white"
+        className="px-4 py-3 flex items-center text-white"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
@@ -161,14 +281,6 @@ const EmbedChat = () => {
             <p className="text-xs opacity-80">Online</p>
           </div>
         </div>
-        {isWidget && (
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="p-1 hover:bg-white/20 rounded transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
       </header>
 
       {/* Chat Area */}
