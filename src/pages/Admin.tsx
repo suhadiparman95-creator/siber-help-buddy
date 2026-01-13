@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText, Globe, Video, ChevronDown, Phone } from 'lucide-react';
+import { Loader2, LogOut, Settings, Info, Home, Image, Upload, FileText, Globe, Video, ChevronDown, Phone, Code } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import EmbedSettings from '@/components/admin/EmbedSettings';
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
@@ -543,14 +544,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="api" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="api">
               <Settings className="mr-2 h-4 w-4" />
-              Pengaturan API
+              API
             </TabsTrigger>
             <TabsTrigger value="knowledge">
               <FileText className="mr-2 h-4 w-4" />
-              Knowledge Base
+              Knowledge
             </TabsTrigger>
             <TabsTrigger value="logos">
               <Image className="mr-2 h-4 w-4" />
@@ -562,7 +563,11 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="info">
               <Info className="mr-2 h-4 w-4" />
-              Info Help Desk
+              Info
+            </TabsTrigger>
+            <TabsTrigger value="embed">
+              <Code className="mr-2 h-4 w-4" />
+              Embed
             </TabsTrigger>
           </TabsList>
 
@@ -1135,6 +1140,10 @@ const Admin = () => {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="embed">
+            <EmbedSettings />
           </TabsContent>
         </Tabs>
       </div>
